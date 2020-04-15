@@ -12,9 +12,24 @@ do_deploy_cargo_archives() {
 
 python() {
     before = "do_deploy_archives"
-    after = None
+    #after = "do_populate_sysroot"
+    after = "cargo-bin-cross-${TARGET_ARCH}:do_populate_sysroot"
+
+    pn = d.getVar('PN')
+    cpu = '${TARGET_ARCH}'
 
     #if bb.data.inherits_class('cargo', d) and bb.utils.contains('INHERIT', 'archiver', 'true', 'false', d):
     if bb.data.inherits_class('cargo', d):
+        ar_src = d.getVarFlag('ARCHIVER_MODE', 'src')
+
+        if ar_src == "original":
+            after = "do_ar_original"
+        elif ar_src == "patched":
+            after = "do_ar_patched"
+        elif ar_src == "configured":
+            after = "do_ar_configured"
+
         bb.build.addtask("do_deploy_cargo_archives", before, after, d)
+        d.appendVarFlag('do_deploy_archives', 'depends', ' %s:do_deploy_cargo_archives' % pn)
+        d.appendVarFlag('do_deploy_cargo_archives', 'depends', ' cargo-bin-cross-%s:do_populate_sysroot' % cpu)
 }
